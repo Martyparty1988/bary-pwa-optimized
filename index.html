@@ -1,362 +1,353 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#F2F2F7">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Villa POS System</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bary - Reservation System</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: #f4f4f4;
+    }
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #333;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+      z-index: 1000;
+    }
+    .nav-bar button {
+      padding: 12px;
+      font-size: 16px;
+      color: white;
+      background: #555;
+      border: none;
+      border-radius: 8px;
+      touch-action: manipulation;
+      transition: transform 0.2s ease-in-out, background 0.2s;
+    }
+    .nav-bar button.active, .nav-bar button:active {
+      background: #4CAF50;
+      transform: scale(0.95);
+    }
+    .section {
+      padding: 20px;
+      margin-bottom: 60px;
+      display: none;
+      animation: fadeIn 0.5s forwards;
+    }
+    .section.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h2 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-size: 16px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #1976D2;
+    }
+    canvas {
+      max-width: 100%;
+      margin: 20px 0;
+    }
+    #qr-video {
+      max-width: 100%;
+      display: none;
+      margin: 10px 0;
+    }
+    @media (min-width: 768px) {
+      .section {
+        max-width: 600px;
+        margin: 20px auto;
+      }
+      .nav-bar {
+        position: static;
+        justify-content: center;
+        gap: 10px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="back-button" id="homeButton">
-        <i class="fas fa-home"></i>
-    </div>
+  <!-- City Tax Section -->
+  <div id="city-tax" class="section">
+    <h2>City Tax Calculator</h2>
+    <label>Number of Guests: <input type="number" id="guests" min="1" value="1"></label>
+    <label>Number of Nights: <input type="number" id="nights" min="1" value="1"></label>
+    <p>Total City Tax: <span id="tax-result">0.00</span> CZK</p>
+  </div>
 
-    <div class="language-switcher">
-        <button class="lang-btn active" data-lang="cs">CS</button>
-        <button class="lang-btn" data-lang="en">EN</button>
-    </div>
+  <!-- Wellness Section -->
+  <div id="wellness" class="section">
+    <h2>Wellness Booking</h2>
+    <label>Select Service:
+      <select id="service">
+        <option value="massage">Massage</option>
+        <option value="sauna">Sauna</option>
+        <option value="spa">Spa</option>
+      </select>
+    </label>
+    <label>Amount (CZK): <input type="number" id="amount" step="0.01" min="0" value="0"></label>
+    <p>Total: <span id="wellness-total">0.00</span> CZK</p>
+    <button onclick="saveWellness()">Save Booking</button>
+  </div>
 
-    <div class="screen active" id="villaScreen">
-        <div class="container">
-            <div class="header" data-lang-key="selectVilla">Select Villa</div>
-            <div class="villa-card" data-villa="little-castle">
-                <i class="fas fa-home"></i>
-                <div>The Little Castle</div>
-            </div>
-            <div class="villa-card" data-villa="amazing-villa">
-                <i class="fas fa-home"></i>
-                <div>Amazing Villa</div>
-            </div>
-            <div class="villa-card" data-villa="oh-yeah-villa">
-                <i class="fas fa-home"></i>
-                <div>Oh Yeah Villa</div>
-            </div>
-        </div>
-    </div>
+  <!-- Gifts Section -->
+  <div id="gifts" class="section active">
+    <h2>Gifts</h2>
+    <h3>Favorite Items</h3>
+    <ul id="favorites"></ul>
+    <h3>Add Gift</h3>
+    <label>Gift Item:
+      <select id="gift-item">
+        <option value="gift-card">Gift Card</option>
+        <option value="mug">Mug</option>
+        <option value="t-shirt">T-Shirt</option>
+        <option value="keychain">Keychain</option>
+        <option value="poster">Poster</option>
+      </select>
+    </label>
+    <label>Quantity: <input type="number" id="gift-quantity" min="1" value="1"></label>
+    <button onclick="addGift()">Add to Order</button>
+    <button onclick="startVoiceInput()">Voice Input</button>
+    <button onclick="startQRScanner()">Scan QR Code</button>
+    <video id="qr-video" autoplay playsinline></video>
+    <canvas id="qr-canvas" style="display: none;"></canvas>
+    <h3>Order History</h3>
+    <ul id="order-history"></ul>
+    <h3>Statistics</h3>
+    <canvas id="gift-stats"></canvas>
+  </div>
 
-    <div class="screen" id="orderScreen">
-        <div class="container">
-            <button class="back-button" id="backToVilla"><i class="fas fa-arrow-left"></i></button>
-            <div class="tab-bar">
-                <div class="tab active" data-category="drinks" data-lang-key="drinks">Drinks</div>
-                <div class="tab" data-category="services" data-lang-key="services">Services</div>
-                <div class="tab" data-category="gifts" data-lang-key="gifts">Gifts</div>
-                <div class="tab" data-category="custom" data-lang-key="custom">Custom</div>
-            </div>
+  <!-- Navigation Bar -->
+  <div class="nav-bar">
+    <button onclick="showSection('gifts')" class="active">Gifts</button>
+    <button onclick="showSection('city-tax')">City Tax</button>
+    <button onclick="showSection('wellness')">Wellness</button>
+  </div>
 
-            <div class="search-bar">
-                <input type="text" id="searchItems" data-lang-placeholder="searchItems" placeholder="Search items...">
-                <i class="fas fa-search"></i>
-            </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script>
+    // Navigation
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none';
+      });
+      document.getElementById(sectionId).classList.add('active');
+      document.getElementById(sectionId).style.display = 'block';
+      document.querySelectorAll('.nav-bar button').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.nav-bar button[onclick="showSection('${sectionId}')"]`).classList.add('active');
+    }
 
-            <div class="category-content" id="drinksCategory" style="display: block;">
-                <div class="item-row" data-item="jagermeister">
-                    <div class="item-info">
-                        <div class="item-name">Jägermeister shot</div>
-                        <div class="item-price">59 CZK / 2.40 EUR</div>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="decrease-qty">-</button>
-                        <input type="number" class="qty-input" value="0" min="0">
-                        <button class="increase-qty">+</button>
-                    </div>
-                </div>
-                <!-- Other drink items... -->
-                <div class="item-row" data-item="beer-keg-30">
-                    <div class="item-info">
-                        <div class="item-name">Beer Keg 30L</div>
-                        <div class="item-price">3000 CZK / 120 EUR</div>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="decrease-qty">-</button>
-                        <input type="number" class="qty-input" value="0" min="0">
-                        <button class="increase-qty">+</button>
-                    </div>
-                </div>
-                <div class="item-row" data-item="beer-keg-50">
-                    <div class="item-info">
-                        <div class="item-name">Beer Keg 50L</div>
-                        <div class="item-price">4375 CZK / 175 EUR</div>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="decrease-qty">-</button>
-                        <input type="number" class="qty-input" value="0" min="0">
-                        <button class="increase-qty">+</button>
-                    </div>
-                </div>
-            </div>
+    // City Tax
+    const TAX_RATE = 21; // CZK per guest per night
+    const guestsInput = document.getElementById('guests');
+    const nightsInput = document.getElementById('nights');
+    const taxResult = document.getElementById('tax-result');
 
-            <div class="category-content" id="servicesCategory">
-                <div class="item-row" data-item="grill-gas">
-                    <div class="item-info">
-                        <div class="item-name">Gas for grill</div>
-                        <div class="item-price">20 EUR</div>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="decrease-qty">-</button>
-                        <input type="number" class="qty-input" value="0" min="0">
-                        <button class="increase-qty">+</button>
-                    </div>
-                </div>
-                <!-- Other service items... -->
-                <div class="item-row" data-item="city-tax">
-                    <div class="item-info">
-                        <div class="item-name">City Tax</div>
-                        <div class="item-price">2 EUR / person / day</div>
-                        <div class="custom-input">
-                            <input type="number" id="cityTaxPeople" value="1" min="1"> people for 
-                            <input type="number" id="cityTaxDays" value="1" min="1"> days
-                        </div>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="decrease-qty">-</button>
-                        <input type="number" class="qty-input" value="0" min="0">
-                        <button class="increase-qty">+</button>
-                    </div>
-                </div>
-                <div class="item-row" data-item="wellness-fee">
-                    <div class="item-info">
-                        <div class="item-name">Wellness fee</div>
-                        <div class="item-price">Custom amount</div>
-                        <div class="custom-input">
-                            <button class="btn wellness-quick-amount" data-amount="300">300€</button>
-                            <button class="btn wellness-quick-amount" data-amount="350">350€</button>
-                            <button class="btn wellness-quick-amount" data-amount="400">400€</button>
-                            <button class="btn wellness-quick-amount" data-amount="custom">Custom</button>
-                            <input type="number" id="wellnessFeeAmount" value="0" min="0" style="display: none;">
-                            <input type="text" id="wellnessFeeNote" placeholder="Add note (e.g., guest name)" style="display: none; flex: 1; margin-top: 5px;">
-                        </div>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="decrease-qty">-</button>
-                        <input type="number" class="qty-input" value="0" min="0">
-                        <button class="increase-qty">+</button>
-                    </div>
-                </div>
-            </div>
+    function calculateTax() {
+      const guests = parseInt(guestsInput.value) || 1;
+      const nights = parseInt(nightsInput.value) || 1;
+      const total = (guests * nights * TAX_RATE).toFixed(2);
+      taxResult.textContent = total;
+    }
 
-            <div class="category-content" id="giftsCategory">
-                <div class="item-row gift-item" data-item="gift-beer">
-                    <div class="item-info">
-                        <div class="item-name">Beer (Gift)</div>
-                        <div class="item-price">0 EUR (Free)</div>
-                    </div>
-                    <div class="item-quantity">
-                        <button class="decrease-qty">-</button>
-                        <input type="number" class="qty-input" value="0" min="0">
-                        <button class="increase-qty">+</button>
-                    </div>
-                </div>
-                <!-- Other gift items... -->
-            </div>
+    guestsInput.addEventListener('input', calculateTax);
+    nightsInput.addEventListener('input', calculateTax);
+    calculateTax();
 
-            <div class="category-content" id="customCategory">
-                <div class="custom-item-form">
-                    <input type="text" id="customItemName" data-lang-placeholder="itemName" placeholder="Item name">
-                    <input type="number" id="customItemPrice" data-lang-placeholder="itemPrice" placeholder="Price in EUR">
-                    <div class="custom-item-options">
-                        <label>
-                            <input type="checkbox" id="customItemGift"> <span data-lang-key="markAsGift">Mark as gift</span>
-                        </label>
-                    </div>
-                    <button class="btn" id="addCustomItem" data-lang-key="addItem">Add Item</button>
-                </div>
-                <div id="customItemsList"></div>
-            </div>
+    // Wellness
+    const serviceInput = document.getElementById('service');
+    const amountInput = document.getElementById('amount');
+    const wellnessTotal = document.getElementById('wellness-total');
 
-            <div class="discount-section">
-                <div class="section-heading" data-lang-key="discounts">Discounts</div>
-                <div class="discount-options">
-                    <div class="discount-option">
-                        <input type="number" id="discountPercent" data-lang-placeholder="discountPercent" placeholder="%">
-                        <button class="btn" id="applyPercentDiscount" data-lang-key="applyPercentDiscount">Apply %</button>
-                    </div>
-                    <div class="discount-option">
-                        <input type="number" id="discountAmount" data-lang-placeholder="discountAmount" placeholder="EUR">
-                        <button class="btn" id="applyAmountDiscount" data-lang-key="applyAmountDiscount">Apply €</button>
-                    </div>
-                    <button class="btn secondary" id="removeDiscount" data-lang-key="removeDiscount">Remove Discount</button>
-                </div>
-            </div>
+    function updateWellness() {
+      const amount = parseFloat(amountInput.value) || 0;
+      wellnessTotal.textContent = amount.toFixed(2);
+    }
 
-            <div class="order-summary-container">
-                <div class="order-summary">
-                    <div class="order-summary-left" data-lang-key="totalItems">Total Items</div>
-                    <div class="order-summary-right" id="totalItems">0</div>
-                </div>
-                <div class="order-summary">
-                    <div class="order-summary-left" data-lang-key="totalAmount">Total Amount</div>
-                    <div class="order-summary-right" id="totalAmount">0.00 EUR</div>
-                </div>
-                <div class="order-summary gift-summary">
-                    <div class="order-summary-left" data-lang-key="giftItems">Gift Items</div>
-                    <div class="order-summary-right" id="totalGiftItems">0</div>
-                </div>
-                <div class="order-summary gift-summary">
-                    <div class="order-summary-left" data-lang-key="giftValue">Gift Value</div>
-                    <div class="order-summary-right" id="totalGiftAmount">0.00 EUR</div>
-                </div>
-                <div class="order-summary discount-summary" style="display: none;">
-                    <div class="order-summary-left" data-lang-key="discount">Discount</div>
-                    <div class="order-summary-right" id="discountType">0%</div>
-                </div>
-                <div class="order-summary discount-summary" style="display: none;">
-                    <div class="order-summary-left" data-lang-key="discountValue">Discount Value</div>
-                    <div class="order-summary-right" id="discountValue">0.00 EUR</div>
-                </div>
-                <div class="order-summary final-total" style="display: none;">
-                    <div class="order-summary-left" data-lang-key="finalTotal">Final Total</div>
-                    <div class="order-summary-right" id="finalTotalAmount">0.00 EUR</div>
-                </div>
-            </div>
+    function saveWellness() {
+      const wellness = {
+        service: serviceInput.value,
+        amount: parseFloat(amountInput.value) || 0,
+        date: new Date().toLocaleString()
+      };
+      const history = JSON.parse(localStorage.getItem('wellnessHistory')) || [];
+      history.push(wellness);
+      localStorage.setItem('wellnessHistory', JSON.stringify(history));
+      alert('Wellness booking saved!');
+    }
 
-            <div class="action-buttons">
-                <button class="btn" id="proceedToPayment" data-lang-key="proceedToPayment">Proceed to Payment</button>
-                <button class="btn secondary" id="clearOrder" data-lang-key="clearOrder">Clear Order</button>
-            </div>
+    serviceInput.addEventListener('change', updateWellness);
+    amountInput.addEventListener('input', updateWellness);
 
-            <div class="notification" id="notification"></div>
-            <div class="undo-bar" id="undoBar" style="display: none;">
-                <button class="btn undo-action" id="undoAction" data-lang-key="cancel">Undo</button>
-                <button class="btn undo-action" id="editAction" data-lang-key="edit">Edit</button>
-            </div>
-        </div>
-    </div>
+    // Gifts
+    const giftItem = document.getElementById('gift-item');
+    const giftQuantity = document.getElementById('gift-quantity');
+    const orderHistory = document.getElementById('order-history');
+    const favoritesList = document.getElementById('favorites');
+    const giftStatsCanvas = document.getElementById('gift-stats').getContext('2d');
 
-    <div class="screen" id="paymentScreen">
-        <div class="container">
-            <button class="back-button" id="backToOrder"><i class="fas fa-arrow-left"></i></button>
-            <div class="header" data-lang-key="paymentMethod">Payment Method</div>
-            <div class="order-summary-container">
-                <div class="order-summary">
-                    <div class="order-summary-left" data-lang-key="totalItems">Total Items</div>
-                    <div class="order-summary-right" id="paymentTotalItems">0</div>
-                </div>
-                <div class="order-summary">
-                    <div class="order-summary-left" data-lang-key="totalAmount">Total Amount</div>
-                    <div class="order-summary-right" id="paymentTotalAmount">0.00 EUR</div>
-                </div>
-                <div class="order-summary gift-summary">
-                    <div class="order-summary-left" data-lang-key="giftItems">Gift Items</div>
-                    <div class="order-summary-right" id="paymentTotalGiftItems">0</div>
-                </div>
-                <div class="order-summary gift-summary">
-                    <div class="order-summary-left" data-lang-key="giftValue">Gift Value</div>
-                    <div class="order-summary-right" id="paymentTotalGiftAmount">0.00 EUR</div>
-                </div>
-                <div class="order-summary discount-summary" style="display: none;">
-                    <div class="order-summary-left" data-lang-key="discount">Discount</div>
-                    <div class="order-summary-right" id="paymentDiscountType">0%</div>
-                </div>
-                <div class="order-summary discount-summary" style="display: none;">
-                    <div class="order-summary-left" data-lang-key="discountValue">Discount Value</div>
-                    <div class="order-summary-right" id="paymentDiscountValue">0.00 EUR</div>
-                </div>
-                <div class="order-summary final-total" style="display: none;">
-                    <div class="order-summary-left" data-lang-key="finalTotal">Final Total</div>
-                    <div class="order-summary-right" id="paymentFinalTotalAmount">0.00 EUR</div>
-                </div>
-            </div>
-            <div class="payment-option" data-payment="cash">
-                <i class="fas fa-money-bill-wave"></i>
-                <div class="payment-option-info">
-                    <div class="payment-option-name" data-lang-key="cash">Cash</div>
-                    <div class="payment-option-description" data-lang-key="cashDescription">Pay with cash</div>
-                </div>
-            </div>
-            <div class="payment-option" data-payment="card">
-                <i class="fas fa-credit-card"></i>
-                <div class="payment-option-info">
-                    <div class="payment-option-name" data-lang-key="card">Card</div>
-                    <div class="payment-option-description" data-lang-key="cardDescription">Pay with credit/debit card</div>
-                </div>
-            </div>
-            <div class="payment-option" data-payment="unpaid">
-                <i class="fas fa-hourglass-half"></i>
-                <div class="payment-option-info">
-                    <div class="payment-option-name" data-lang-key="unpaid">Unpaid</div>
-                    <div class="payment-option-description" data-lang-key="unpaidDescription">Mark as unpaid (pay later)</div>
-                </div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn" id="completeOrder" data-lang-key="completeOrder">Complete Order</button>
-                <button class="btn secondary" id="cancelPayment" data-lang-key="cancel">Cancel</button>
-            </div>
-        </div>
-    </div>
+    function addGift() {
+      const item = giftItem.value;
+      const quantity = parseInt(giftQuantity.value) || 1;
+      const order = { item, quantity, date: new Date().toLocaleString() };
+      const history = JSON.parse(localStorage.getItem('giftHistory')) || [];
+      history.push(order);
+      localStorage.setItem('giftHistory', JSON.stringify(history));
+      updateOrderHistory();
+      updateFavorites();
+      updateStats();
+    }
 
-    <div class="screen" id="receiptScreen">
-        <div class="container">
-            <button class="back-button" id="backToMain"><i class="fas fa-arrow-left"></i></button>
-            <div class="header" data-lang-key="orderCompleted">Order Completed</div>
-            <div class="receipt" id="receiptContent">
-                <div class="receipt-header">
-                    <div class="receipt-title" data-lang-key="receipt">RECEIPT</div>
-                    <div class="receipt-villa" id="receiptVilla">Villa Name</div>
-                    <div class="receipt-date" id="receiptDate">Date and Time</div>
-                </div>
-                <div class="receipt-section">
-                    <div class="receipt-section-title" data-lang-key="paidItems">Paid Items</div>
-                    <div class="receipt-items" id="receiptPaidItems"></div>
-                    <div class="receipt-discount" id="receiptDiscount" style="display: none;">
-                        <div class="receipt-item">
-                            <div class="receipt-item-left">
-                                <div class="receipt-item-name" data-lang-key="discount">Discount</div>
-                                <div class="receipt-item-qty" id="receiptDiscountType">10%</div>
-                            </div>
-                            <div class="receipt-item-price" id="receiptDiscountValue">-10.00 EUR</div>
-                        </div>
-                    </div>
-                    <div class="receipt-total">
-                        <div data-lang-key="total">Total</div>
-                        <div id="receiptPaidTotal">0.00 EUR</div>
-                    </div>
-                </div>
-                <div class="receipt-section gift-section" id="receiptGiftSection" style="display: none;">
-                    <div class="receipt-section-title" data-lang-key="giftItems">Gift Items</div>
-                    <div class="receipt-items" id="receiptGiftItems"></div>
-                    <div class="receipt-total">
-                        <div data-lang-key="giftValue">Gift Value</div>
-                        <div id="receiptGiftTotal">0.00 EUR</div>
-                    </div>
-                </div>
-                <div class="receipt-payment" id="receiptPayment">Paid with Cash</div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn" id="shareReceipt" data-lang-key="shareReceipt">Share Receipt</button>
-                <button class="btn" id="saveReceipt" data-lang-key="saveAsPDF">Save as PDF</button>
-                <button class="btn secondary" id="newOrder" data-lang-key="newOrder">New Order</button>
-            </div>
-        </div>
-    </div>
+    function updateOrderHistory() {
+      const history = JSON.parse(localStorage.getItem('giftHistory')) || [];
+      orderHistory.innerHTML = history.map(h => `<li>${h.quantity}x ${h.item} (${h.date})</li>`).join('');
+    }
 
-    <div class="screen" id="historyScreen">
-        <div class="container">
-            <button class="back-button" id="backToHistoryMain"><i class="fas fa-arrow-left"></i></button>
-            <div class="header" data-lang-key="orderHistory">Order History</div>
-            <div id="orderHistoryList" class="empty-state">
-                <i class="fas fa-history"></i>
-                <div data-lang-key="noOrders">No orders yet</div>
-            </div>
-            <div class="action-buttons">
-                <button class="btn secondary" id="clearHistory" data-lang-key="clearHistory">Clear History</button>
-                <button class="btn" id="backToMainFromHistory" data-lang-key="backToMain">Back to Main</button>
-            </div>
-        </div>
-    </div>
+    function updateFavorites() {
+      const history = JSON.parse(localStorage.getItem('giftHistory')) || [];
+      const counts = {};
+      history.forEach(h => {
+        counts[h.item] = (counts[h.item] || 0) + h.quantity;
+      });
+      const favorites = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([item, count]) => `<li>${item} (${count}x)</li>`);
+      favoritesList.innerHTML = favorites.join('');
+    }
 
-    <div class="loading">
-        <div class="loading-spinner"></div>
-        <div data-lang-key="processing">Processing...</div>
-    </div>
+    function updateStats() {
+      const history = JSON.parse(localStorage.getItem('giftHistory')) || [];
+      const counts = {};
+      history.forEach(h => {
+        counts[h.item] = (counts[h.item] || 0) + h.quantity;
+      });
+      const labels = ['gift-card', 'mug', 't-shirt', 'keychain', 'poster'];
+      const data = labels.map(item => counts[item] || 0);
+      new Chart(giftStatsCanvas, {
+        type: 'bar',
+        data: {
+          labels: ['Gift Card', 'Mug', 'T-Shirt', 'Keychain', 'Poster'],
+          datasets: [{
+            label: 'Gift Orders',
+            data: data,
+            backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'],
+            borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F', '#7B1FA2'],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
 
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    <script src="app.js"></script>
+    // Voice Input
+    function startVoiceInput() {
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.onresult = (event) => {
+          const command = event.results[0][0].transcript.toLowerCase();
+          const items = {
+            'gift card': 'gift-card', 'mug': 'mug', 't-shirt': 't-shirt',
+            'keychain': 'keychain', 'poster': 'poster'
+          };
+          const match = Object.keys(items).find(key => command.includes(key));
+          if (match) {
+            giftItem.value = items[match];
+            const quantityMatch = command.match(/\d+/);
+            giftQuantity.value = quantityMatch ? quantityMatch[0] : 1;
+            addGift();
+          } else {
+            alert('Item not recognized. Try saying "Add 2 gift cards" or similar.');
+          }
+        };
+        recognition.onerror = () => alert('Voice input failed. Please try again.');
+        recognition.start();
+      } else {
+        alert('Voice input not supported in this browser.');
+      }
+    }
+
+    // QR Code Scanner
+    const qrVideo = document.getElementById('qr-video');
+    const qrCanvas = document.getElementById('qr-canvas');
+    const qrContext = qrCanvas.getContext('2d');
+
+    function startQRScanner() {
+      qrVideo.style.display = 'block';
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+          qrVideo.srcObject = stream;
+          qrVideo.play();
+          scanQRCode();
+        })
+        .catch(() => alert('Camera access denied. Please allow camera permissions.'));
+    }
+
+    function scanQRCode() {
+      qrCanvas.width = qrVideo.videoWidth;
+      qrCanvas.height = qrVideo.videoHeight;
+      qrContext.drawImage(qrVideo, 0, 0, qrCanvas.width, qrCanvas.height);
+      const imageData = qrContext.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code) {
+        alert('QR Code scanned: ' + code.data);
+        qrVideo.srcObject.getTracks().forEach(track => track.stop());
+        qrVideo.style.display = 'none';
+      } else {
+        requestAnimationFrame(scanQRCode);
+      }
+    }
+
+    // Initialize
+    updateOrderHistory();
+    updateFavorites();
+    updateStats();
+  </script>
 </body>
 </html>
